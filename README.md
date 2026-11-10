@@ -42,7 +42,7 @@ Windows PowerShell:
 ### 3. Install Dependencies
 
 ```bash
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 4. Konfigurasi Environment
