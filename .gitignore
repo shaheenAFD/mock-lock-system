@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+mock_lock.db
+.env
+command.txt

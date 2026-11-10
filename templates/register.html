@@ -1,0 +1,14 @@
+
+{% extends "base.html" %}{% block title %}Register · Mock Lock{% endblock %}
+{% block content %}
+<section class="auth-card">
+  <h1>Buat Akun</h1><p class="muted">Daftarkan akun pemilik sistem.</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Username</label><input name="username" required minlength="3" autocomplete="username">
+    <label>Password (minimal 8 karakter)</label><input type="password" name="password" required minlength="8" autocomplete="new-password">
+    <button class="btn btn-primary full" type="submit">Daftar</button>
+  </form>
+  <p class="muted center">Sudah punya akun? <a href="{{ url_for('auth.login') }}">Login</a></p>
+</section>
+{% endblock %}

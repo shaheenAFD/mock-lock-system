@@ -1,0 +1,122 @@
+{% extends "base.html" %}{% block title %}Dashboard · Mock Lock{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><h1>Dashboard Monitoring</h1><p class="muted">Kelola perangkat dan pantau status keamanannya.</p></div>
+  <span class="pill">MODE SIMULASI</span>
+</div>
+
+
+<section class="panel">
+  <h2>Daftarkan Perangkat</h2>
+
+  <form class="device-form" method="post"
+        action="{{ url_for('devices.add_device') }}">
+
+    <input type="hidden" name="csrf_token"
+           value="{{ csrf_token() }}">
+
+    <div>
+      <label>Device Name</label>
+      <input
+        type="text"
+        name="device_name"
+        placeholder="Contoh: Laptop Pribadi"
+        required
+      >
+    </div>
+
+    <div>
+      <label>Device Type</label>
+      <select name="device_type" required>
+        <option value="Laptop">Laptop</option>
+        <option value="Desktop">Desktop</option>
+        <option value="Smartphone">Smartphone</option>
+        <option value="Tablet">Tablet</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Operating System</label>
+      <select name="operating_system" required>
+        <option value="Windows">Windows</option>
+        <option value="Linux">Linux</option>
+        <option value="macOS">macOS</option>
+        <option value="Android">Android</option>
+        <option value="iOS">iOS</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Location (Simulasi)</label>
+      <input
+        type="text"
+        name="location"
+        required
+      >
+    </div>
+
+    <div class="form-action">
+      <button class="btn btn-primary" type="submit">
+        + Tambahkan Perangkat
+      </button>
+    </div>
+
+  </form>
+</section>
+
+
+<section class="section">
+  <h2>Perangkat Terdaftar</h2>
+  {% if devices %}
+  <div class="device-grid">
+    {% for d in devices %}
+    <article class="device-card">
+      <div class="card-top">
+        <div><h3>{{ d.device_name }}</h3><p class="muted small">{{ d.device_type }} · {{ d.operating_system }}</p></div>
+        {% if d.locked %}<span class="status locked">LOCKED</span>{% else %}<span class="status safe">AMAN</span>{% endif %}
+      </div>
+      <div class="info-row"><span>Status perangkat</span><strong>{{ d.status }}</strong></div>
+      <div class="info-row"><span>Proteksi file</span><strong>{{ "Aktif (simulasi)" if d.encrypted else "Tidak aktif" }}</strong></div>
+      <div class="info-row"><span>Lokasi</span><strong>{{ d.location }}</strong></div>
+      <div class="actions">
+        {% if not d.locked %}
+        <form method="post" action="{{ url_for('devices.lock_device', device_id=d.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-danger" type="submit">Remote Lockdown</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('devices.recover_device', device_id=d.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-success" type="submit">Unlock / Recovery</button>
+        </form>
+        {% endif %}
+        <form class="location-form" method="post" action="{{ url_for('devices.update_location', device_id=d.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input name="location" placeholder="Ubah lokasi simulasi" required>
+          <button class="btn btn-outline" type="submit">Update lokasi</button>
+        </form>
+        <form method="post" action="{{ url_for('devices.delete_device', device_id=d.id) }}" onsubmit="return confirm('Hapus perangkat ini?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline" type="submit">Hapus</button>
+        </form>
+      </div>
+      <p class="note">Lockdown dan proteksi file pada prototipe ini hanya mengubah status simulasi di database; mengenkripsi file contoh yang telah ditentukan.</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+    <div class="empty">Belum ada perangkat. Tambahkan perangkat melalui formulir di atas.</div>
+  {% endif %}
+</section>
+
+<section class="panel section">
+  <h2>Security Audit Log</h2>
+  {% if logs %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Waktu</th><th>Aktivitas</th><th>Detail</th></tr></thead>
+    <tbody>{% for log in logs %}<tr><td>{{ log.created_at }}</td><td><span class="log-tag">{{ log.action }}</span></td><td>{{ log.details }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted">Belum ada aktivitas yang tercatat.</p>{% endif %}
+</section>
+{% endblock %}
