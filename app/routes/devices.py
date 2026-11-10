@@ -1,6 +1,4 @@
-import os
 import shutil
-import uuid
 from pathlib import Path
 from datetime import datetime
 from app.services.file_protection import generate_device_key
@@ -301,109 +299,26 @@ def update_location(device_id):
 @login_required
 def delete_device(device_id):
 
-    # 1. Validasi kepemilikan device
     device = get_owned_device(device_id)
 
-    # 2. Tentukan lokasi folder device
-    storage_root = Path(
-        current_app.config["DEVICE_STORAGE"]
-    ).resolve()
+    with get_db() as db:
+        db.execute(
+            """
+            DELETE FROM devices
+            WHERE id=? AND user_id=?
+            """,
+            (device_id, session["user_id"])
+        )
 
-    device_dir = storage_root / f"device_{device_id}"
-
-    # 3. Siapkan lokasi quarantine
-    quarantine_dir = storage_root / ".quarantine"
-    quarantine_dir.mkdir(parents=True, exist_ok=True)
-
-    quarantine_path = (
-        quarantine_dir / f"device_{device_id}_{uuid.uuid4().hex}"
+    log_event(
+        session["user_id"],
+        "DEVICE_DELETED",
+        f"Perangkat '{device['device_name']}' dihapus."
     )
 
-    folder_moved = False
-
-    try:
-
-        # 4. Pindahkan folder device ke quarantine
-        if device_dir.exists() or device_dir.is_symlink():
-            os.replace(device_dir, quarantine_path)
-            folder_moved = True
-
-        # 5. Hapus data database dan catat audit
-        with get_db() as db:
-
-            cursor = db.execute(
-                """
-                DELETE FROM devices
-                WHERE id=? AND user_id=?
-                """,
-                (device_id, session["user_id"])
-            )
-
-            if cursor.rowcount != 1:
-                raise RuntimeError(
-                    "Device tidak ditemukan atau bukan milik pengguna."
-                )
-
-            db.execute(
-                """
-                INSERT INTO audit_logs
-                (user_id, action, details, created_at)
-                VALUES (?, ?, ?, ?)
-                """,
-                (
-                    session["user_id"],
-                    "DEVICE_DELETED",
-                    f"Perangkat '{device['device_name']}' dihapus.",
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                )
-            )
-
-        # Transaksi database sudah berhasil commit.
-        # Encryption key terhapus melalui ON DELETE CASCADE.
-
-    except Exception:
-
-        # 6. Jika transaksi gagal, pulihkan folder device
-        if folder_moved and (
-            quarantine_path.exists() or quarantine_path.is_symlink()
-        ):
-            try:
-                os.replace(quarantine_path, device_dir)
-
-            except OSError:
-                current_app.logger.exception(
-                    "Gagal memulihkan folder device dari quarantine."
-                )
-
-        raise
-
-    # 7. Hapus folder quarantine setelah database berhasil
-    cleanup_failed = False
-
-    if folder_moved:
-        try:
-            if quarantine_path.is_symlink():
-                quarantine_path.unlink()
-            else:
-                shutil.rmtree(quarantine_path)
-
-        except OSError:
-            cleanup_failed = True
-            current_app.logger.exception(
-                "Gagal menghapus folder quarantine device."
-            )
-
-    # 8. Berikan informasi kepada pengguna
-    if cleanup_failed:
-        flash(
-            "Data perangkat berhasil dihapus, tetapi folder fisiknya "
-            "belum berhasil dibersihkan.",
-            "warning"
-        )
-    else:
-        flash(
-            "Perangkat berhasil dihapus.",
-            "success"
-        )
+    flash(
+        "Perangkat berhasil dihapus.",
+        "success"
+    )
 
     return redirect(url_for("main.index"))

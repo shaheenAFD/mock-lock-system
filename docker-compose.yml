@@ -1,0 +1,61 @@
+
+services:
+  web:
+    build: .
+    container_name: mock-lock-app
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      SESSION_COOKIE_SECURE: "false"
+
+    expose:
+      - "8000"
+
+    volumes:
+      - mocklock_data:/app/instance
+
+    networks:
+      - backend
+
+    read_only: true
+
+    tmpfs:
+      - /tmp
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+  nginx:
+    image: nginx:alpine
+    container_name: mock-lock-nginx
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:8080:80"
+
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+    networks:
+      - frontend
+      - backend
+
+    depends_on:
+      - web
+
+networks:
+  frontend:
+    driver: bridge
+
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  mocklock_data:
