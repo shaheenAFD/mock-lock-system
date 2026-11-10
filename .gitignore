@@ -2,5 +2,12 @@
 __pycache__/
 *.pyc
 mock_lock.db
+*.db
+*.sqlite
+*.sqlite3
 .env
 command.txt
+/instance/device storage/*
+!/instance/device storage/.gitkeep
+*.log
+.pytest_cache/
